@@ -1,0 +1,478 @@
+\documentclass[12pt, a4paper]{article}
+
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+% dodatkowe pakiety LaTeX'a
+\usepackage[OT4]{polski}
+\usepackage[cp1250]{inputenc}
+\usepackage[top=2.5cm, bottom=2.5cm, left=2cm, right=2cm]{geometry}
+\usepackage{graphicx}
+\usepackage{float}
+\usepackage[colorlinks=true, linkcolor=blue]{hyperref}
+\usepackage{anyfontsize}
+\usepackage{bbm}
+\usepackage{amsmath}
+\usepackage{animate}
+\usepackage{Sweave}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+% dodatkowe definicje œrodowisk
+\newtheorem{theorem}{Twierdzenie}
+\newtheorem{lemma}{Lemat}
+\newtheorem{corollary}{Wniosek}
+\newtheorem{proposition}{Propozycja}
+\newtheorem{remark}{Uwaga}
+\newtheorem{note}{Notka}
+\newtheorem{fact}{Fakt}
+\newtheorem{definition}{Definicja}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+% ustawienia globalne
+<<ustawienia_globalne, echo=FALSE>>=
+library(knitr)
+library(latex2exp)
+library(reliaR)
+library(binom)
+library(stats)
+library(NADA)
+library(xtable) #
+opts_chunk$set(fig.path='figure/', fig.align='center', fig.pos='H',fig.width=4, fig.height=3)
+
+@
+
+\begin{document}
+\SweaveOpts{concordance=TRUE}
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+% strona tytulowa
+\title{Analiza prze¿ycia\\
+Raport 1}
+\author{Romana ¯muda}
+\maketitle
+\newpage
+
+\tableofcontents 
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\newpage
+\section{Zadanie do sprawozdania - Czêœæ 1}
+\label{s:part1}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\subsection{Zadanie 1}
+Najpierw wyznaczny odpowiednie funkcje definiuj¹ce gêstoœæ, dystrybuantê, funkcjê prze¿ycia oraz funkcjê hazardu dla podanego rozk³adu.
+
+<<funkcje,echo=TRUE,eval=TRUE>>=
+
+BS_gestosc <- function(t, alpha, beta){
+  alpha*beta*exp(alpha)*(t^(beta-1))*exp(t^beta)*exp(-alpha*exp(t^(beta)))
+}
+BS_dystrybuanta <- function(t, alpha, beta){
+  1-exp(alpha*(1-exp(t^beta)))
+}
+
+BS_przezycia <- function(t, alpha, beta){
+  exp(alpha*(1-exp(t^beta)))
+}
+
+BS_hazard <- function(t, alpha, beta){
+  BS_gestosc(t,alpha,beta)/BS_przezycia(t, alpha, beta)
+}
+
+@
+Zadaniem jest narysowanie 2 wykresów funkcji hazardu rozk³adu $ BS(\alpha, \beta)$, gdzie $\alpha > 0, \beta > 0 $ s¹ parametrami kszta³tu.
+\newline
+Bior¹c $\beta >= 1$ dostaniemy rosn¹c¹ funkcje hazardu, poni¿ej znajduje siê przyk³ad(zobacz rysunek \ref{F:BS_rosnacy}), natomiast dla $0 < \beta < 1$ (zobacz rysunek \ref{F:BS_wannowy}) bêdzie mia³a kszta³t wannowy. 
+\newline
+\newline
+Wykres niemalej¹cej funkcji hazardu \ref{F:BS_rosnacy}, wtedy mamy rosn¹c¹ intensywnoœæi awarii  dla rozk³adu $BS$ przy parametrach $ \alpha = 0.1,  \beta = 1.1$.
+\begin{figure}[H]
+<<BS_rosnacy,fig=TRUE,echo=FALSE, fig.cap='Wykres funkcji hazardu BS'>>=
+curve(BS_hazard(x, a=0.1, b=1.1), xlim = c(0, 5), ylab='BS(0.1, 1.1)', col = "blue")
+
+@
+\caption{Wykresy funkcji hazardu $BS(0.1, 1.1)$}
+\label{F:BS_rosnacy}
+\end{figure}
+
+Wykres wannowy funkcji hazardu \ref{F:BS_wannowy}:
+\begin{figure}[H]
+<<BS_wannowy,fig=TRUE,echo=FALSE, fig.cap='Wykres funkcji hazardu BS'>>=
+curve(BS_hazard(x, a=1, b=0.5), xlim = c(0.85,1.3), ylab='BS(1, 0.5)', col = "red")
+@
+\caption{Wykresy funkcji hazardu $BS(1, 0.5)$}
+\label{F:BS_wannowy}
+\end{figure}
+
+
+\subsection{Zadanie 2}
+Napisanie programu generuj¹cego n zmiennych z rozk³adu $BS(n, \alpha, \beta) $ metod¹ odwróconej dystrybuanty.
+
+<<generowanie,echo=TRUE,eval=TRUE>>=
+#Funkcja na odwrócon¹ dystrybuantê
+BS_odwrocona_dystrybuanta <- function(t, alpha, beta){
+    log(1-(log(1-t)/alpha))^(1/beta)
+}
+
+BS_wygenerowane <- function(n, alpha, beta){
+  set <- runif(n)
+  BS_odwrocona_dystrybuanta(set, alpha, beta)
+}
+@
+
+
+\subsection{Zadanie 3}
+W tym zadaniu naszym celem jest narysowanie dystrybuanty rozk³ady $BS(n, \alpha, \beta) $ oraz dystybuanty empirycznej. Wygenerujmy sobie $ n = 10 zmiennych, gdzie \alpha = 1,  \beta = 0.3 $.
+<<koddystrybuanta,echo=TRUE,eval=TRUE>>=
+#empiryczna
+wygenerowane_empiryczna<-BS_wygenerowane(10, 1, 0.3)
+#teoretyczna 
+summary_set <- seq(0.01, 4, 0.01)
+wygenerowane_teoretyczna<-BS_dystrybuanta(summary_set, 1, 0.3)
+
+@
+\begin{figure}[H]
+<<Dystrybuanty,fig=TRUE,echo=FALSE, fig.cap='Wykres funkcji hazardu BS'>>=
+
+plot(ecdf(wygenerowane_empiryczna), col = "red", xlim=c(0,4), ylim=c(0,1.05), main = NULL)
+lines(summary_set, wygenerowane_teoretyczna, col="blue")
+legend("bottomright", c("Teoretyczna","Empiryczna"), col=c("blue","red"),
+       lwd=2, cex=.85 )
+@
+\caption{Wykresy dystrybuanty teoretycznej i empirycznej}
+\label{F:Dystrybuanty}
+\end{figure}
+
+
+\subsection{Zadanie 4}
+
+W ostatnim zadaniu z tej serii generujemy 100 liczb z rozkladu $BS(1, 0.3)$, nastêpnie wyznaczamy wartoœci statystyk opisowych, przedstawiamy to w tabeli \ref{tab:wektory}.
+<<StatystykiOpisowewygenerowane,echo=FALSE,eval=TRUE,results=tex>>=
+wygenerowane_wektory<-BS_wygenerowane(100, 1, 0.3)
+
+stat.opis<-c(summary(wygenerowane_wektory),sd(wygenerowane_wektory))
+stat.opis.m=matrix(stat.opis,nrow=1,ncol=length(stat.opis), ,
+                   list(c("  "),c("Min","1st Qu","Mediana",
+                  "Œrednia","3d Qu.","Max","Odch.Stand.")))
+
+
+print(xtable(stat.opis.m,caption="Statystyki opisowe dla wygenerowanych liczb",label="tab:wektory"),
+      type="latex",table.placement = "H", , caption.placement = "top")
+@
+Nastêpnie na wykresach \ref{F:wykresy}, \ref{F:boxplot}  ilustrujemy ich gêstoœæ oraz wykres pude³kowy w formie boxplota.
+\begin{figure}[H]
+<<wykresy,fig=TRUE,echo=FALSE, fig.cap='Wykres funkcji hazardu BS'>>=
+hist(wygenerowane_wektory,breaks = "Scott", probability=TRUE, xlim=c(0,4), ylab="Czêstoœæ",
+col="lightblue")
+lines(density(wygenerowane_wektory), col = "red")
+
+@
+
+\caption{Histogram wygenerowanych zmiennych i ich gêstoœæ}
+\label{F:wykresy}
+\end{figure}
+
+
+\begin{figure}[H]
+<<boxplot,fig=TRUE,echo=FALSE, fig.cap='Wykres funkcji hazardu BS'>>=
+boxplot(wygenerowane_wektory,col="lightblue",bg="yellow", main="Wykres pude³kowy x")
+@
+\caption{Wykres pude³kowy dla wektora obserwacji x}
+\label{F:boxplot}
+\end{figure}
+
+
+
+
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\newpage
+\section{Zadania do sprawozdania - Czêœæ 2}
+\label{s:part2}
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\subsection{Zadanie 1}
+\textbf{{\large Punkt A}}
+\newline
+Zadaniem jest napisanie programu do generowania n zmiennych cenzurowanych I-go typu z rozk³adu wyk³adniczego z parametrem skali  $\vartheta$ :
+<<<Itypcenzurowanie,echo=TRUE,eval=TRUE>>=
+Ityp <- function(theta, n, t){
+  x <- rexp(n, rate = 1/theta)
+  y <- vector()
+  for(i in 1:n){
+    if(x[i] <= t){
+      y[i] <- x[i]
+      }
+    else{
+      y[i] <- t
+    }
+  }
+  return(sort(y, decreasing = FALSE))
+} 
+#Przykladowe wygenerowanie zmiennych cenzurowanych 
+#I-go typu dla n = 20 oraz t= 0.6
+Ityp(1, 20, 0.6)
+@
+
+
+\textbf{{\large Punkt B}}
+\newline
+Tym razem bêdziemy generowaæ m zmiennych II-typu, gdzie $m <= n $. Zmienna m jest z góry narzucon¹ wartoœci¹, która reprezentuje liczbê m obserwacji (mp. awarii).
+<<<IItypcenzurowanie,echo=TRUE,eval=TRUE>>=
+
+IItyp <- function(theta, n, m){
+ x <- rexp(n, rate = 1/theta)
+ x_m <- sort(x)[m]
+ y <- pmin(x, x_m)
+ return(sort(y, decreasing = FALSE))
+} 
+#Przykladowe wygenerowanie zmiennych cenzurowanych 
+#II-go typu dla n = 20 oraz m = 16
+IItyp(1, 20, 10)
+@
+
+\textbf{{\large Punkt C}}
+\newline
+W ostatnim punkcie generujemy zmienne z losowego cenzurowania dla parametru $\eta$ bêd¹cego parametrem skali.
+<<<losowecenzurowanie,echo=TRUE,eval=TRUE>>=
+
+losowecenzurowanie <- function(theta, n, eta){
+ x <- rexp(n, rate = 1/theta)
+ z <- rexp(n, rate = 1/eta)
+ y <- vector()
+ for( i in 1:n){
+   y[i] <- min(x[i], z[i])
+ }
+  return(y)
+} 
+#Przykladowe wygenerowanie zmiennych cenzurowanych 
+#losowo dla n = 20 oraz eta = 0.5
+losowecenzurowanie(1, 20, 0.5)
+@
+
+
+
+\subsection{Zadanie 2}
+Wybieram zmienne z cenzurowania I-go typu, u¿ywaj¹c funkcji do generowania zmiennych z zadania 1, opisujê je u¿ywaj¹c wartoœci rozs¹dnych, wykorzystam do tego boxplota i histogram, który wska¿e mi mo¿liwe sensowne statystyki opisowe.
+<<<statystyki cenzurowane,echo=TRUE,eval=TRUE>>=
+I <- Ityp(1, 100, 0.6)
+@
+\begin{figure}[H]
+<<boxplotek,fig=TRUE,echo=FALSE, fig.cap='Wykres funkcji hazardu BS'>>=
+par(mfrow = c(1,2))
+boxplot(I,col="lightblue",bg="yellow", main="Wykres pude³kowy x")
+hist(I, probability=TRUE, ylab="Czêstoœæ",
+col="lightblue")
+@
+\caption{Wykres pude³kowy i histogram dla wektora obserwacji x}
+\label{F:boxplotek}
+\end{figure}
+
+Tabela \ref{tab:Ityp} przedstawia sensowne wartoœci statystyki opisowej obliczonych dla wygenerowanych zmiennych I typu cenzurowania.
+<<StatystykiOpisoweTabI,echo=FALSE,eval=TRUE,results=tex>>=
+
+stat.opis.I<-summary(I)
+stat.opis.m=matrix(stat.opis.I,nrow=1,ncol=length(stat.opis.I),,
+                   list(c(" "),c("Min","1st Qu","Mediana",
+                  "Œrednia","3d Qu.","Max")))
+print(xtable(stat.opis.m,caption="Statystyki opisowe dla typu I cenzurowania",label="tab:Ityp"),
+      type="latex",table.placement = "H",,caption.placement = "top")
+@
+
+
+
+Jedynymi sensownymi statystykami opisowymi s¹ kwartyle niskiego rzêdu.
+Œrednia nie jest sensown¹ statystyk¹ opisow¹.
+Wszystki kwartyle powy¿szej zadanego $t_{0}$ równie¿ nie maj¹ sensu. 
+Mediana nie ma sensu jeœli wiêcej ni¿ po³owa danych jest cenzurowanych.
+
+
+
+
+
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\newpage
+\section{Zadania do sprawozdania - Czêœæ 3}
+\label{s:part3}
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\subsection{Zadanie 1}
+\textbf{{\large Punkt A}}
+
+
+W tym zadaniu mamy podaæ oszacowanie najwiêkszej wiarygodnoœci œredniego czasu do pierwszej awarii dla 20 komponentów przy czym 10 z nich uleg³o awarii w podanych momentach, jest to I typ cenzorowania
+<<<NWrrr,echo=TRUE,eval=TRUE>>=
+x<-c(0.497, 0.638, 0.703, 0.839, 0.841, 0.950, 1.054, 1.103, 1.125, 1.495)
+#dane prawostronnie cenzurowane I - typu
+n <- 20
+t0 <- 2 #2 lata
+R <- length(x)
+#estymator NW parametru 1/ni
+T1 <- sum(x) + t0*(n - R) 
+#statystyka dla estymatora T1
+ni <- T1/R 
+#oszacowany czas do pierwszej awarii metod¹ NW
+ni 
+@
+\textbf{{\large Punkt B}}
+\newline
+Nastêpnie mamy do wyznanczenia przedzia³ ufnoœci na poziomie $ 99 \% $ 
+<<<Przedzial Ufnosci,echo=TRUE,eval=TRUE>>=
+przedzial_ufnosci <- binom.confint(R, n, conf.level = 0.99)
+# przedzial ufnoœci dla 1/ni
+przedzial_ufnosci$theta_lower <- -log(1-przedzial_ufnosci$lower)/t0
+przedzial_ufnosci$theta_lower 
+przedzial_ufnosci$theta_upper <- -log(1-przedzial_ufnosci$upper)/t0
+
+# przedzialy dla ni
+ni_lower <- data.frame("lower" = 1/przedzial_ufnosci$theta_upper)
+ni_upper <- data.frame("upper" =1/przedzial_ufnosci$theta_lower)
+
+x <- data.frame("metoda" = przedzial_ufnosci$method, "x" = przedzial_ufnosci$x, "n" = przedzial_ufnosci$n)
+przedzial_ufnosci_ni <-cbind.data.frame(x, ni_lower, ni_upper)
+
+@
+Odpowiednia tablica (\ref{tab:ufnosc}) z przedzia³ami ufnoœci dla odpowiadaj¹cym im metod¹:
+
+<<przedzial ufnoscri,echo=FALSE,eval=TRUE,results=tex>>=
+
+print(xtable(przedzial_ufnosci_ni,caption="Przedzia³y ufnoœci",label="tab:ufnosc"),
+      type="latex",table.placement = "H",,caption.placement = "top")
+@
+
+\subsection{Zadanie 2}
+\textbf{{\large Punkt A}}
+\newline
+W tym zadaniu mamy podaæ oszacowanie najwiêkszej wiarygodnoœci œredniego czasu do pierwszej awarii dla n = 20 komponentów przy czym zak³adamy, ¿e obserwujemy tylko do 10 pierwszych awarii, jest to II typ danych cenzurowanych.
+<<NWIhkI,echo=TRUE,eval=TRUE>>=
+x<-c(0.497, 0.638, 0.703, 0.839, 0.841, 0.950, 1.054, 1.103, 1.125, 1.495)
+#dane prawostronnie cenzurowane I - typu
+n <- 20
+m <- 10
+t0 <- 2 #2 lata
+sum <- sum(x)
+x_m <- x[m]
+#estymator NW parametru 1/ni
+T2 <- sum + (n - m)*x_m 
+#statystyka dla estymatora T1
+ni_II <- T2/m
+#oszacowany czas do pierwszej awarii metod¹ NW
+ni_II 
+@
+\textbf{{\large Punkt B}}
+\newline
+Nastêpnie mamy do wyznanczenia przedzia³ ufnoœci na poziomie $ 99 \% $, wiêc $\alpha = 0.01$ nadal przy cenzurowaniu II typu
+<<<Przedzial Ufnosci II,echo=TRUE,eval=TRUE>>=
+a <- qgamma(0.01, shape = m, scale = 1/m)
+b <- qgamma(0.99, shape = m, scale = 1/m )
+ni_II <- T2/m
+ni_lower_II <- data.frame("lower" = ni_II/b)
+ni_upper_II <- data.frame("upper" = ni_II/a)
+przedzial_ufnosci_ni_II <- data.frame(ni_lower_II, ni_upper_II)
+przedzial_ufnosci_ni_II
+@
+Odpowiednia tablica (\ref{tab:ufnosc II}) z przedzia³em ufnoœci dla danych cenzurowanych II typu:
+
+<<przedzial ufnosci III,echo=FALSE,eval=TRUE,results=tex>>=
+
+print(xtable(przedzial_ufnosci_ni_II,caption="Przedzia³ ufnoœci typu II",label="tab:ufnosc II"),
+      type="latex",table.placement = "H",,caption.placement = "top")
+@
+
+
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\newpage
+\section{Zadania do sprawozdania - Czêœæ 4}
+\label{s:part4}
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\subsection{Zadanie 1}
+Mamy do rozwa¿enia sytuacjê, tak¹ ¿e czas w latach do pierwszej awarii komponentu pewnego typu ma rozk³ad wyk³adniczy. Przeprowadzono test na 20 komponentach tego typu i zanotowano czas do wyst¹pienia pierwszej awarii. W ci¹gu dwóch lat obserwacji awarii uleg³o 10 komponentów. Mamy do czynienia z danymi cenzurowanymi I rodzaju. Okreœlmy podstawowe zmienne wynikaj¹ce z tego typu zmienych cenzurowanych, wprowadzamy takie samo nazewnictwo, jak na wyk³adach:
+<<NWII,echo=TRUE,eval=TRUE>>=
+x<-c(0.497, 0.638, 0.703, 0.839, 0.841, 0.950, 1.054, 1.103, 1.125, 1.495)
+#dane prawostronnie cenzurowane I - typu
+n <- 20
+t0 <- 2 #2 lata
+R <- length(x)
+#estymator NW parametru 1/ni
+T1 <- sum(x) + t0*(n - R) 
+#statystyka estymatora T1
+ni <- T1/R 
+theta_0 <- 1/2.9
+@
+Mamy to rozwa¿enia hipotezê $ H_{0} : $
+Po analizie funkcji wiarygodnoœci( na³o¿enie logarytmu i obliczenie pochodnej), 
+zauwa¿amy ¿e funkcja jest rosn¹ca na przedziale $(0,  max \theta)$, gdzie $max \theta = R/ T_{1}$. 
+
+<<Nkkks,echo=TRUE,eval=TRUE>>=
+theta_max <- R/T1
+
+theta_max <- data.frame("theta_max" = theta_max)
+theta_0 <- data.frame("theta_zero" = theta_0)
+thety <- data.frame(theta_max, theta_0)
+
+@
+Odpowiednia tablica (\ref{tab:thety}) ukazuj¹ca potrzebne wartoœci do nastêpnej analizy:
+
+<<thety,echo=FALSE,eval=TRUE,results=tex>>=
+
+print(xtable(thety,caption="Wartoœci",label="tab:thety"),
+      type="latex",table.placement = "H",,caption.placement = "top")
+@
+
+Analizuj¹c iloraz $\lambda(x)$ dostajemy, ¿e supremum na zbiorze $theta_{0}$ to L($max \theta $), natomiast na zbiorze $theta$ supremum równie¿ L($max \theta $). Wstawiaj¹c do definicji $\lambda(x)$ dostajemy ¿e $\lambda(x) = 1$. Ostatecznie hipotezê uznajemy za wiarygodn¹, co oznacza dla nas ¿e hipoteza  $ H_{0}$ przyjmujemy.
+\subsection{Zadanie 2}
+W tym zadaniu rozwa¿amy podobn¹ sytuacjê z tym, ¿e obserwacje prowadzono do $10$ awarii. Zauwa¿amy, ¿e podane zmienne s¹ teraz cenzurowanymi II rodzaju. Tak jak w przyk³adzie wy¿ej definiujemy odpowiednie wartoœci:
+<<NWIIqwe,echo=TRUE,eval=TRUE>>=
+x<-c(0.497, 0.638, 0.703, 0.839, 0.841, 0.950, 1.054, 1.103, 1.125, 1.495)
+#dane prawostronnie cenzurowane I - typu
+n <- 20
+m <- 10
+t0 <- 2 #2 lata
+sum <- sum(x)
+x_m <- x[m]
+#estymator NW parametru 1/ni
+T2 <- sum + (n - m)*x_m 
+#statystyka dla estymatora T1
+theta_max2 <- T2/m
+
+@
+Najpierw wyznaczamy iloraz $\lambda(x)$ odpowiadaj¹cy wartoœci supremum funkcji wiarygodnoœcina zbiorze $\theta_{0}$ przez supremum funkcji ilorazowu wiarygodnoœci na ca³ym zbiorze $\theta$. Po obliczeniach podobnych do pierwszego zadania tylko z inn¹ funkcj¹ wiarygodnoœci i statystyk¹ dostajemy, ¿e tymi supremami s¹  L($\theta_{0}$) oraz L($m/T2$). Wtedy nasz test przyjmuje postaæ $\varphi(x) = 1$, gdy $\lambda < \lambda_{0} \bigvee$ 0, gdy $\lambda >= \lambda_{0}$. Poni¿ej wyliczam statystykê $\lambda(x)$:
+<<lambda,echo=TRUE,eval=TRUE>>=
+lambda<-(1/2^10*(exp(-1/2.9*T2))/(1/theta_max2^10*exp(-1/theta_max2*T2)))
+@
+Nastêpnie wyznaczamy wartoœci krytyczne korzystaj¹c z twierdzenia Wirksa:
+<<lambda0,echo=TRUE,eval=TRUE>>=
+lambda0<-exp(-qchisq(1-0.01, df=1)/2)
+@
+Sprawdzamy wczeœniej zdefiniowan¹ hipotezê:
+<<test,echo=TRUE,eval=TRUE>>=
+test<-function(lambda0){
+  if(lambda < lambda0){
+    print("Odzucamy hipotezê H_0")
+    
+  }
+  else if(lambda >= lambda0){
+    print("Przyjmujemy hipotezê H_0")
+  }
+}
+test(lambda0)
+
+
+library(survival)
+library(survminer)
+library(ggplot2)
+
+dane3<-read.delim("CzasDoDializy.csv", header = TRUE, ";")
+dane3$Czas <- as.numeric(dane3$Czas)
+
+surv_object1<-Surv(dane3$Czas, dane3$Cenzura)
+fit1 <- survfit(surv_object1 ~ dane3$Arg25Pro, data = dane3,
+                type = "kaplan-meier")
+g1<-ggsurvplot(fit1, data = dane3, conf.int = FALSE)
+g1
+@
+\end{document}
+
+
+
